@@ -249,102 +249,213 @@
             font-weight: 500;
         }
 
-        /* Display Section */
+        /* Display Section - Flow Diagram */
         .display-section {
-            display: grid;
-            grid-template-columns: 1fr 340px 1fr;
             flex: 1;
             border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 200px 1fr 340px 1fr 200px;
+            padding: 20px;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
         }
 
-        .display-col {
-            padding: 24px;
+        /* Input boxes area */
+        .input-area {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            gap: 8px;
+            padding-right: 12px;
         }
 
-        .display-col:first-child {
-            border-right: 1px solid var(--border);
-        }
-
-        .display-col:last-child {
-            border-left: 1px solid var(--border);
-        }
-
-        .display-col-label {
+        .input-box {
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            padding: 8px 10px;
             font-size: 10px;
+        }
+
+        .input-box .label {
             text-transform: uppercase;
-            letter-spacing: 0.12em;
-            color: var(--text-dim);
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed var(--border-light);
-        }
-
-        .display-col-item {
-            font-size: 13px;
+            letter-spacing: 0.08em;
             color: var(--text-muted);
-            margin-bottom: 6px;
         }
 
-        .display-col-item:last-child {
-            margin-bottom: 0;
+        .input-box.tall { padding: 14px 10px; }
+        .input-box.wide { padding: 8px 14px; }
+
+        /* ASCII flow lines */
+        .flow-lines {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            font-size: 11px;
+            color: var(--text-dim);
+            padding: 4px 0;
         }
 
-        .display-center {
+        .flow-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            white-space: pre;
+            font-family: inherit;
+            line-height: 1;
         }
 
-        .radar {
-            width: 100%;
-            max-width: 280px;
-            aspect-ratio: 1;
-            border-radius: 50%;
-            background: var(--accent);
-            position: relative;
+        .flow-row .star {
+            color: var(--accent);
+        }
+
+        /* Central TWIG terminal */
+        .twig-terminal {
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .twig-header {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
         }
 
-        .radar::before {
-            content: '';
-            position: absolute;
-            width: 70%;
-            height: 70%;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
+        .twig-header .controls {
+            color: var(--text-dim);
         }
 
-        .radar::after {
-            content: '';
-            position: absolute;
-            width: 40%;
-            height: 40%;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-        }
-
-        .radar-status {
+        .twig-header .title {
+            flex: 1;
             text-align: center;
-            color: white;
-            z-index: 1;
-        }
-
-        .radar-status-label {
-            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            opacity: 0.8;
+            color: var(--text-muted);
         }
 
-        .radar-status-value {
-            font-size: 12px;
-            font-weight: 500;
+        .twig-header .title::before,
+        .twig-header .title::after {
+            content: '═══════';
+            color: var(--border-light);
+            margin: 0 6px;
+        }
+
+        .twig-body {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Output boxes area */
+        .output-area {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-left: 12px;
+        }
+
+        .output-box {
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            padding: 8px 10px;
+            font-size: 10px;
+        }
+
+        .output-box .label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+
+        .output-box.tall { padding: 14px 10px; }
+        .output-box.wide { padding: 8px 14px; }
+
+        /* Twig main terminal */
+        .terminal-window.twig-main {
+            min-width: 300px;
+            max-width: 340px;
+        }
+
+        .agent-log {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 10px;
+        }
+
+        .log-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border: 1px solid var(--border-light);
+            background: var(--bg);
+            opacity: 0.5;
+            transition: all 0.3s;
+        }
+
+        .log-line.active {
+            opacity: 1;
+            border-color: var(--accent);
+        }
+
+        .log-line.highlight {
+            opacity: 1;
+            border-color: var(--accent);
+            background: rgba(232, 90, 48, 0.05);
+        }
+
+        .log-line.success {
+            opacity: 0.8;
+            border-color: var(--accent-green);
+        }
+
+        .log-line.success .log-agent {
+            color: var(--accent-green);
+        }
+
+        .log-line.success .log-msg {
+            color: var(--accent-green);
+        }
+
+        .log-agent {
+            color: var(--accent);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .log-msg {
+            color: var(--text-muted);
+            flex: 1;
+        }
+
+        .log-action {
+            color: var(--accent);
+            font-size: 9px;
+            flex-shrink: 0;
+        }
+
+        .twig-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border-light);
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+
+        .status-sep {
+            color: var(--border-light);
+        }
+
+        .status-live {
+            color: var(--accent-green);
         }
 
         /* Code Section */
@@ -647,35 +758,72 @@
                 </div>
             </div>
 
-            <!-- Display Section -->
+            <!-- Display Section - Flow Diagram -->
             <div class="display-section">
-                <div class="display-col">
-                    <div class="display-col-label">Input</div>
-                    <div class="display-col-item">PostHog Events</div>
-                    <div class="display-col-item">Session Replays</div>
-                    <div class="display-col-item">Error Stack Traces</div>
-                    <div style="height: 20px;"></div>
-                    <div class="display-col-label">Analysis</div>
-                    <div class="display-col-item">Rage Click Detection</div>
-                    <div class="display-col-item">Confusion Patterns</div>
-                    <div class="display-col-item">User Flow Analysis</div>
+                <!-- Input Boxes -->
+                <div class="input-area">
+                    <div class="input-box tall"><span class="label">Sessions</span></div>
+                    <div class="input-box"><span class="label">Errors</span></div>
+                    <div class="input-box wide"><span class="label">Analytics</span></div>
+                    <div class="input-box"><span class="label">Surveys</span></div>
+                    <div class="input-box tall"><span class="label">Experiments</span></div>
+                    <div class="input-box"><span class="label">Prompts</span></div>
                 </div>
-                <div class="display-center">
-                    <div class="radar">
-                        <div class="radar-status">
-                            <div class="radar-status-label">Agent Runtime</div>
-                            <div class="radar-status-value">● Operational</div>
+
+                <!-- Flow Lines In (ASCII) -->
+                <div class="flow-lines" id="flow-in">
+                    <div class="flow-row">───────┐</div>
+                    <div class="flow-row">───────┤</div>
+                    <div class="flow-row">───────┤</div>
+                    <div class="flow-row">───────┼───</div>
+                    <div class="flow-row">───────┤</div>
+                    <div class="flow-row">───────┤</div>
+                    <div class="flow-row">───────┘</div>
+                </div>
+
+                <!-- Central TWIG Terminal -->
+                <div class="twig-terminal">
+                    <div class="twig-header">
+                        <span class="controls">≡ ×</span>
+                        <span class="title">Twig</span>
+                    </div>
+                    <div class="twig-body">
+                        <div class="agent-log" id="agent-log">
+                            <div class="log-line"><span class="log-agent">[A1]</span> <span class="log-msg">picked up Error #412</span></div>
+                            <div class="log-line"><span class="log-agent">[A2]</span> <span class="log-msg">analyzing session...</span></div>
+                            <div class="log-line highlight"><span class="log-agent">[A3]</span> <span class="log-msg">opened PR #89</span> <span class="log-action">→ review</span></div>
+                            <div class="log-line"><span class="log-agent">[A1]</span> <span class="log-msg">fixing null check</span></div>
+                            <div class="log-line success"><span class="log-agent">[A2]</span> <span class="log-msg">✓ rage clicks found</span></div>
+                            <div class="log-line"><span class="log-agent">[A4]</span> <span class="log-msg">creating flag...</span></div>
+                        </div>
+                        <div class="twig-status">
+                            <span>4 agents</span>
+                            <span class="status-sep">·</span>
+                            <span>12 tasks</span>
+                            <span class="status-sep">·</span>
+                            <span class="status-live">● live</span>
                         </div>
                     </div>
                 </div>
-                <div class="display-col">
-                    <div class="display-col-label">Output</div>
-                    <div class="display-col-item">Auto PR Creation</div>
-                    <div class="display-col-item">Test Verification</div>
-                    <div class="display-col-item">Lint Compliance</div>
-                    <div style="height: 20px;"></div>
-                    <div class="display-col-label">Pipeline</div>
-                    <div class="display-col-item">Error → Fix → PR → Deploy</div>
+
+                <!-- Flow Lines Out (ASCII) -->
+                <div class="flow-lines" id="flow-out">
+                    <div class="flow-row">┌───────</div>
+                    <div class="flow-row">├───────</div>
+                    <div class="flow-row">├───────</div>
+                    <div class="flow-row">───┼───────</div>
+                    <div class="flow-row">├───────</div>
+                    <div class="flow-row">└───────</div>
+                </div>
+
+                <!-- Output Boxes -->
+                <div class="output-area">
+                    <div class="output-box"><span class="label">Feature Flags</span></div>
+                    <div class="output-box tall"><span class="label">Experiments</span></div>
+                    <div class="output-box"><span class="label">Features</span></div>
+                    <div class="output-box wide"><span class="label">Bug Fixes</span></div>
+                    <div class="output-box"><span class="label">PRs</span></div>
+                    <div class="output-box tall"><span class="label">Instrumentation</span></div>
                 </div>
             </div>
 
@@ -784,6 +932,7 @@
     </div>
 
     <script>
+        // Timestamp
         function updateTimestamp() {
             const now = new Date();
             const formatted = now.toISOString().slice(11, 19) + ' UTC';
@@ -791,6 +940,104 @@
         }
         updateTimestamp();
         setInterval(updateTimestamp, 1000);
+
+        // Agent log cycling
+        const logMessages = [
+            { agent: 'A1', msg: 'picked up Error #412', type: '' },
+            { agent: 'A2', msg: 'analyzing session replay...', type: '' },
+            { agent: 'A3', msg: 'opened PR #89', type: 'highlight', action: '→ review' },
+            { agent: 'A1', msg: 'fixing null check', type: '' },
+            { agent: 'A2', msg: '✓ identified rage clicks', type: 'success' },
+            { agent: 'A4', msg: 'creating feature flag...', type: '' },
+            { agent: 'A1', msg: '✓ pushed fix', type: 'success' },
+            { agent: 'A3', msg: 'waiting for approval...', type: '' },
+            { agent: 'A2', msg: 'setting up experiment', type: '' },
+            { agent: 'A4', msg: '✓ flag enabled', type: 'success' },
+            { agent: 'A3', msg: '✓ PR merged', type: 'success' },
+            { agent: 'A1', msg: 'picking up next task...', type: '' },
+        ];
+
+        let logIndex = 0;
+        const logContainer = document.getElementById('agent-log');
+        const visibleLines = 6;
+
+        function updateLog() {
+            const lines = [];
+            for (let i = 0; i < visibleLines; i++) {
+                const idx = (logIndex + i) % logMessages.length;
+                const m = logMessages[idx];
+                const isActive = i === visibleLines - 1;
+                const classes = ['log-line', m.type, isActive ? 'active' : ''].filter(Boolean).join(' ');
+                const action = m.action ? `<span class="log-action">${m.action}</span>` : '';
+                lines.push(`<div class="${classes}"><span class="log-agent">[${m.agent}]</span> <span class="log-msg">${m.msg}</span> ${action}</div>`);
+            }
+            logContainer.innerHTML = lines.join('');
+            logIndex = (logIndex + 1) % logMessages.length;
+        }
+
+        updateLog();
+        setInterval(updateLog, 1800);
+
+        // ASCII flow animation
+        const flowInRows = document.querySelectorAll('#flow-in .flow-row');
+        const flowOutRows = document.querySelectorAll('#flow-out .flow-row');
+
+        const inPatterns = [
+            '───────┐',
+            '───────┤',
+            '───────┤',
+            '───────┼───',
+            '───────┤',
+            '───────┤',
+            '───────┘'
+        ];
+
+        const outPatterns = [
+            '┌───────',
+            '├───────',
+            '├───────',
+            '───┼───────',
+            '├───────',
+            '└───────'
+        ];
+
+        let flowTick = 0;
+
+        function animateAsciiFlow() {
+            // Animate input lines
+            flowInRows.forEach((row, i) => {
+                const pattern = inPatterns[i];
+                const chars = [...pattern];
+                const pos = (flowTick + i * 2) % chars.length;
+
+                if (chars[pos] === '─') {
+                    chars[pos] = '*';
+                }
+
+                row.innerHTML = chars.map(c =>
+                    c === '*' ? '<span class="star">*</span>' : c
+                ).join('');
+            });
+
+            // Animate output lines
+            flowOutRows.forEach((row, i) => {
+                const pattern = outPatterns[i];
+                const chars = [...pattern];
+                const pos = (flowTick + i * 2 + 4) % chars.length;
+
+                if (chars[pos] === '─') {
+                    chars[pos] = '*';
+                }
+
+                row.innerHTML = chars.map(c =>
+                    c === '*' ? '<span class="star">*</span>' : c
+                ).join('');
+            });
+
+            flowTick++;
+        }
+
+        setInterval(animateAsciiFlow, 150);
     </script>
 </body>
 </html>

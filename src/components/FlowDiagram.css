@@ -1,0 +1,294 @@
+/* Input nodes */
+.input-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 10px;
+  min-width: 160px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.input-node .node-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.input-node .label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.input-node .desc {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.input-node.active {
+  border-color: var(--accent);
+}
+
+.input-node.active .label {
+  color: var(--accent);
+}
+
+/* Output nodes */
+.output-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 10px;
+  min-width: 160px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.output-node .node-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.output-node .label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.output-node .desc {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.output-node.active {
+  border-color: var(--accent-green);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.output-node.active .label {
+  color: var(--accent-green);
+}
+
+/* Output Log Node - matches TWIG node style */
+.output-log-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  width: 300px;
+  height: 340px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.output-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.output-log-header .controls {
+  color: var(--text-dim);
+}
+
+.output-log-header .title {
+  flex: 1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.output-log-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.output-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg);
+  font-size: 10px;
+}
+
+.output-item.new {
+  border-color: var(--accent-green);
+}
+
+.output-item.empty {
+  border: 1px dashed var(--border-light);
+  background: transparent;
+}
+
+.output-item .output-label {
+  font-weight: 600;
+  color: var(--accent-green);
+  flex-shrink: 0;
+}
+
+.output-item .output-desc {
+  color: var(--text-muted);
+  flex: 1;
+}
+
+/* TWIG central node */
+.twig-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  width: 300px;
+  height: 340px;
+  font-size: 11px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.twig-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.twig-header .controls {
+  color: var(--text-dim);
+}
+
+.twig-header .title {
+  flex: 1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.twig-body {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.log-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg);
+  font-size: 10px;
+}
+
+.log-line.success {
+  border-color: var(--accent-green);
+}
+
+.log-line.success .log-agent,
+.log-line.success .log-msg {
+  color: var(--accent-green);
+}
+
+.log-line.highlight {
+  border-color: var(--accent);
+  background: rgba(232, 90, 48, 0.05);
+}
+
+.log-agent {
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.log-msg {
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.log-action {
+  color: var(--accent);
+  font-size: 9px;
+}
+
+.twig-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-light);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.twig-status .sep {
+  color: var(--border-light);
+}
+
+.twig-status .live {
+  color: var(--accent-green);
+}
+
+/* React Flow overrides */
+.react-flow__edge-path {
+  stroke: var(--border-light) !important;
+  stroke-width: 1 !important;
+}
+
+.react-flow__edge.animated path {
+  stroke-dasharray: 4 2;
+  animation: flowDash 0.4s linear infinite;
+}
+
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -6;
+  }
+}
+
+/* Animated dots on edges */
+.react-flow__edge.animated path {
+  stroke: var(--text-dim);
+}
+
+.react-flow__handle {
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  border: none;
+  opacity: 0;
+}
+
+/* Hide default background */
+.react-flow__background {
+  display: none;
+}
+
+/* Remove React Flow node wrapper styling */
+.react-flow__node {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
