@@ -15,10 +15,9 @@
             --text-muted: #666;
             --text-dim: #999;
             --border: #1a1a1a;
-            --border-dashed: #ccc;
+            --border-light: #ddd;
             --accent: #e85a30;
             --accent-green: #22c55e;
-            --accent-amber: #f59e0b;
         }
 
         * {
@@ -32,8 +31,11 @@
             background: var(--bg);
             color: var(--text);
             font-size: 13px;
-            line-height: 1.6;
-            min-height: 100vh;
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .grid-bg {
@@ -43,66 +45,88 @@
             right: 0;
             bottom: 0;
             background-image:
-                linear-gradient(rgba(26, 26, 26, 0.08) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(26, 26, 26, 0.08) 1px, transparent 1px);
+                linear-gradient(rgba(26, 26, 26, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26, 26, 26, 0.06) 1px, transparent 1px);
             background-size: 20px 20px;
             pointer-events: none;
             z-index: 0;
         }
 
-        .container {
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
             position: relative;
             z-index: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 32px;
+            flex-shrink: 0;
         }
 
-        /* Navigation */
-        nav {
+        .top-bar-section {
+            padding: 12px 20px;
+            border-right: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 24px 0;
-            border-bottom: 1px solid var(--border);
+            gap: 12px;
+        }
+
+        .top-bar-section:last-child {
+            border-right: none;
+        }
+
+        .top-bar-section.logo-section {
+            min-width: 200px;
+        }
+
+        .top-bar-section.center {
+            flex: 1;
+            justify-content: space-between;
         }
 
         .logo {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 700;
             letter-spacing: -0.02em;
+        }
+
+        .barcode {
+            display: flex;
+            gap: 2px;
+            height: 20px;
+            align-items: end;
+        }
+
+        .barcode span {
+            width: 2px;
+            background: var(--text);
         }
 
         .nav-links {
             display: flex;
-            gap: 32px;
-            font-size: 12px;
+            gap: 24px;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
         }
 
         .nav-links a {
             color: var(--text-muted);
             text-decoration: none;
-            transition: color 0.2s;
         }
 
         .nav-links a:hover {
             color: var(--text);
         }
 
-        .nav-right {
+        .status-bar {
             display: flex;
-            align-items: center;
-            gap: 20px;
-            font-size: 11px;
+            gap: 16px;
+            color: var(--text-dim);
         }
 
-        .status-indicator {
+        .status-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            color: var(--text-muted);
+            gap: 6px;
         }
 
         .status-dot {
@@ -112,61 +136,73 @@
             border-radius: 50%;
         }
 
-        /* Hero */
+        /* ===== MAIN LAYOUT ===== */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Left: Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        /* Hero Section */
         .hero {
-            padding: 100px 0 80px;
+            padding: 40px;
             border-bottom: 1px solid var(--border);
         }
 
-        .hero-label {
+        .hero-badge {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.15em;
             color: var(--accent);
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .hero-title {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: 400;
             line-height: 1.1;
             letter-spacing: -0.03em;
-            margin-bottom: 24px;
-            max-width: 700px;
+            margin-bottom: 16px;
         }
 
         .hero-subtitle {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--text-muted);
-            max-width: 540px;
-            line-height: 1.7;
-            margin-bottom: 48px;
+            line-height: 1.6;
+            max-width: 520px;
+            margin-bottom: 24px;
         }
 
         .hero-cta {
             display: flex;
-            gap: 16px;
+            gap: 12px;
         }
 
         .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
+            padding: 12px 24px;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             text-decoration: none;
-            border: 1px solid transparent;
+            border: 1px solid var(--border);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
 
         .btn-primary {
             background: var(--text);
             color: var(--bg);
-            border-color: var(--text);
         }
 
         .btn-primary:hover {
@@ -177,225 +213,151 @@
         .btn-secondary {
             background: transparent;
             color: var(--text);
-            border-color: var(--border);
         }
 
         .btn-secondary:hover {
-            border-color: var(--text);
+            background: var(--text);
+            color: var(--bg);
         }
 
-        /* Spec Sheet */
-        .spec-sheet {
-            padding: 60px 0;
+        /* Spec Row */
+        .spec-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
             border-bottom: 1px solid var(--border);
         }
 
-        .spec-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 32px;
-            padding-bottom: 16px;
-            border-bottom: 1px dashed var(--border-dashed);
-        }
-
-        .spec-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-muted);
-        }
-
-        .spec-id {
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        .spec-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            border: 1px dashed var(--border-dashed);
-        }
-
         .spec-cell {
-            padding: 20px;
-            border-right: 1px dashed var(--border-dashed);
-            border-bottom: 1px dashed var(--border-dashed);
+            padding: 16px 20px;
+            border-right: 1px solid var(--border);
         }
 
-        .spec-cell:nth-child(4n) {
+        .spec-cell:last-child {
             border-right: none;
-        }
-
-        .spec-cell:nth-last-child(-n+4) {
-            border-bottom: none;
         }
 
         .spec-label {
             font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.1em;
             color: var(--text-dim);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .spec-value {
             font-size: 12px;
-            color: var(--text);
+            font-weight: 500;
         }
 
-        /* Visual Display */
-        .visual-section {
-            padding: 80px 0;
+        /* Display Section */
+        .display-section {
+            display: grid;
+            grid-template-columns: 1fr 340px 1fr;
+            flex: 1;
             border-bottom: 1px solid var(--border);
         }
 
-        .visual-grid {
-            display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            gap: 48px;
-            align-items: center;
+        .display-col {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .metrics-col {
-            font-size: 11px;
+        .display-col:first-child {
+            border-right: 1px solid var(--border);
         }
 
-        .metric-group {
-            margin-bottom: 32px;
+        .display-col:last-child {
+            border-left: 1px solid var(--border);
         }
 
-        .metric-label {
+        .display-col-label {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--text-dim);
             margin-bottom: 12px;
             padding-bottom: 8px;
-            border-bottom: 1px dashed var(--border-dashed);
+            border-bottom: 1px dashed var(--border-light);
         }
 
-        .metric-item {
+        .display-col-item {
+            font-size: 13px;
             color: var(--text-muted);
             margin-bottom: 6px;
         }
 
-        .metric-item.highlight {
-            color: var(--accent);
+        .display-col-item:last-child {
+            margin-bottom: 0;
         }
 
-        /* Central Display */
-        .central-display {
-            position: relative;
+        .display-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .display-frame {
-            position: relative;
+        .radar {
+            width: 100%;
+            max-width: 280px;
             aspect-ratio: 1;
-            max-width: 360px;
-            margin: 0 auto;
+            border-radius: 50%;
+            background: var(--accent);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .display-ring {
+        .radar::before {
+            content: '';
             position: absolute;
-            border: 1px solid var(--border);
+            width: 70%;
+            height: 70%;
+            border: 1px solid rgba(255,255,255,0.3);
             border-radius: 50%;
         }
 
-        .display-ring.outer {
-            inset: 0;
-        }
-
-        .display-ring.middle {
-            inset: 15%;
-        }
-
-        .display-ring.inner {
-            inset: 35%;
-            background: var(--accent);
-        }
-
-        .display-crosshair {
+        .radar::after {
+            content: '';
             position: absolute;
-            background: var(--border);
+            width: 40%;
+            height: 40%;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
         }
 
-        .display-crosshair.h {
-            width: 100%;
-            height: 1px;
-            top: 50%;
-            left: 0;
-        }
-
-        .display-crosshair.v {
-            width: 1px;
-            height: 100%;
-            top: 0;
-            left: 50%;
-        }
-
-        .display-label {
-            position: absolute;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-dim);
-        }
-
-        .display-label.top { top: -24px; left: 50%; transform: translateX(-50%); }
-        .display-label.right { right: -32px; top: 50%; transform: translateY(-50%); }
-        .display-label.bottom { bottom: -24px; left: 50%; transform: translateX(-50%); }
-        .display-label.left { left: -32px; top: 50%; transform: translateY(-50%); }
-
-        .display-status {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        .radar-status {
             text-align: center;
             color: white;
-            z-index: 10;
+            z-index: 1;
         }
 
-        .display-status-label {
+        .radar-status-label {
             font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             opacity: 0.8;
-            margin-bottom: 4px;
         }
 
-        .display-status-value {
-            font-size: 11px;
+        .radar-status-value {
+            font-size: 12px;
             font-weight: 500;
-        }
-
-        .display-dot {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--bg);
-            border-radius: 50%;
         }
 
         /* Code Section */
         .code-section {
-            padding: 48px 0;
             border-bottom: 1px solid var(--border);
-        }
-
-        .code-frame {
-            border: 1px dashed var(--border-dashed);
-            background: var(--bg-card);
         }
 
         .code-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 20px;
-            border-bottom: 1px dashed var(--border-dashed);
+            padding: 12px 20px;
+            border-bottom: 1px dashed var(--border-light);
             font-size: 11px;
         }
 
@@ -419,20 +381,19 @@
         }
 
         .code-block {
-            padding: 20px;
-            font-size: 12px;
-            line-height: 1.9;
-            overflow-x: auto;
+            padding: 16px 20px;
+            font-size: 13px;
+            line-height: 1.7;
         }
 
         .code-line {
             display: flex;
-            gap: 20px;
+            gap: 16px;
         }
 
         .line-number {
             color: var(--text-dim);
-            min-width: 20px;
+            min-width: 16px;
             text-align: right;
             user-select: none;
         }
@@ -444,31 +405,29 @@
         .code-variable { color: #1a1a1a; }
         .code-type { color: #267f99; }
 
-        /* Stats */
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+        /* Right Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-section {
+            padding: 20px;
             border-bottom: 1px solid var(--border);
         }
 
-        .stat-card {
-            padding: 40px 32px;
-            border-right: 1px solid var(--border);
+        .sidebar-section:last-child {
+            border-bottom: none;
         }
 
-        .stat-card:last-child {
-            border-right: none;
+        .sidebar-section.grow {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
-        .stat-value {
-            font-size: 42px;
-            font-weight: 600;
-            line-height: 1;
-            margin-bottom: 8px;
-            letter-spacing: -0.02em;
-        }
-
-        .stat-label {
+        .sidebar-label {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.12em;
@@ -476,180 +435,98 @@
             margin-bottom: 16px;
         }
 
-        .stat-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* Capabilities */
-        .capabilities-section {
-            padding: 80px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .section-header {
+        .sidebar-row {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 48px;
+            margin-bottom: 8px;
+            font-size: 12px;
         }
 
-        .section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
+        .sidebar-row-label {
             color: var(--text-muted);
         }
 
-        .section-subtitle {
-            font-size: 11px;
-            color: var(--text-dim);
+        .sidebar-row-value {
+            color: var(--text);
         }
 
-        .capabilities-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            background: var(--border);
+        .sidebar-row-value.accent {
+            color: var(--accent);
         }
 
-        .capability-card {
-            background: var(--bg);
-            padding: 32px;
+        .sidebar-row-value.green {
+            color: var(--accent-green);
+        }
+
+        .capability {
+            margin-bottom: 16px;
+        }
+
+        .capability:last-child {
+            margin-bottom: 0;
         }
 
         .capability-index {
             font-size: 10px;
             color: var(--text-dim);
-            margin-bottom: 16px;
+            margin-bottom: 4px;
         }
 
         .capability-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-            margin-bottom: 12px;
-            letter-spacing: -0.01em;
+            margin-bottom: 4px;
         }
 
         .capability-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        /* Use Cases */
-        .use-cases-section {
-            padding: 80px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .use-case-tabs {
-            display: flex;
-            gap: 32px;
-            margin-bottom: 40px;
-            padding-bottom: 16px;
-            border-bottom: 1px dashed var(--border-dashed);
-        }
-
-        .use-case-tab {
             font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-dim);
-            cursor: pointer;
-            transition: color 0.2s;
-            background: none;
-            border: none;
-            font-family: inherit;
-        }
-
-        .use-case-tab.active,
-        .use-case-tab:hover {
-            color: var(--text);
-        }
-
-        .use-case-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 48px;
-        }
-
-        .use-case-info h3 {
-            font-size: 20px;
-            font-weight: 400;
-            margin-bottom: 16px;
-            letter-spacing: -0.02em;
-        }
-
-        .use-case-info p {
             color: var(--text-muted);
-            font-size: 13px;
-            line-height: 1.7;
+            line-height: 1.5;
         }
 
-        .use-case-visual {
-            background: var(--bg-card);
-            border: 1px dashed var(--border-dashed);
-            padding: 24px;
-            font-size: 12px;
-        }
-
-        .error-line {
-            color: #dc2626;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 1px dashed var(--border-dashed);
-        }
-
-        .action-line {
-            color: #16a34a;
-        }
-
-        /* CTA */
         .cta-section {
-            padding: 100px 0;
-            text-align: center;
+            margin-top: auto;
+            padding: 20px;
+            border-top: 1px solid var(--border);
         }
 
         .cta-title {
-            font-size: 32px;
-            font-weight: 400;
-            margin-bottom: 20px;
-            letter-spacing: -0.02em;
-        }
-
-        .cta-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            max-width: 480px;
-            margin: 0 auto 48px;
-            line-height: 1.7;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 12px;
         }
 
         /* Footer */
-        footer {
+        .footer {
+            display: flex;
             border-top: 1px solid var(--border);
-            padding: 32px 0;
+            font-size: 10px;
+            color: var(--text-dim);
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
         }
 
-        .footer-content {
+        .footer-section {
+            padding: 12px 20px;
+            border-right: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 11px;
-            color: var(--text-dim);
+            gap: 16px;
+        }
+
+        .footer-section:last-child {
+            border-right: none;
+        }
+
+        .footer-section.grow {
+            flex: 1;
+            justify-content: space-between;
         }
 
         .footer-links {
             display: flex;
-            gap: 24px;
+            gap: 16px;
         }
 
         .footer-links a {
@@ -665,6 +542,9 @@
         .color-bar {
             display: flex;
             height: 4px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
         }
 
         .color-bar span {
@@ -683,146 +563,124 @@
 </head>
 <body>
     <div class="grid-bg"></div>
-    <div class="container">
-        <nav>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-section logo-section">
             <div class="logo">TWIG</div>
+            <div class="barcode">
+                <span style="height:100%"></span>
+                <span style="height:60%"></span>
+                <span style="height:100%"></span>
+                <span style="height:80%"></span>
+                <span style="height:40%"></span>
+                <span style="height:100%"></span>
+                <span style="height:100%"></span>
+                <span style="height:60%"></span>
+                <span style="height:40%"></span>
+                <span style="height:100%"></span>
+            </div>
+        </div>
+        <div class="top-bar-section center">
             <div class="nav-links">
                 <a href="#">Docs</a>
                 <a href="#">Pricing</a>
                 <a href="#">Blog</a>
                 <a href="#">GitHub</a>
             </div>
-            <div class="nav-right">
-                <div class="status-indicator">
+            <div class="status-bar">
+                <div class="status-item">
                     <span class="status-dot"></span>
-                    <span>Operational</span>
+                    <span>Systems Operational</span>
+                </div>
+                <div class="status-item">TX-01</div>
+                <div class="status-item" id="timestamp"></div>
+            </div>
+        </div>
+        <div class="top-bar-section">
+            <span>From the makers of PostHog</span>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Hero -->
+            <div class="hero">
+                <div class="hero-badge">Agentic Development Environment</div>
+                <h1 class="hero-title">build your product<br>autonomously</h1>
+                <p class="hero-subtitle">
+                    An agentic development environment that understands your user behavior. Twig connects to PostHog, sees what your users see, and ships fixes automatically.
+                </p>
+                <div class="hero-cta">
+                    <a href="#" class="btn btn-primary">Download</a>
+                    <a href="#" class="btn btn-secondary">View Docs</a>
                 </div>
             </div>
-        </nav>
 
-        <section class="hero">
-            <div class="hero-label">Agentic Development Environment</div>
-            <h1 class="hero-title">build your product autonomously</h1>
-            <p class="hero-subtitle">
-                An agentic development environment that understands your user behavior. Twig connects to PostHog, sees what your users see, and ships fixes automatically.
-            </p>
-            <div class="hero-cta">
-                <a href="#" class="btn btn-primary">Download</a>
-                <a href="#" class="btn btn-secondary">View Docs</a>
-            </div>
-        </section>
-
-        <section class="spec-sheet">
-            <div class="spec-header">
-                <span class="spec-title">System Specification</span>
-                <span class="spec-id">TX-01</span>
-            </div>
-            <div class="spec-grid">
+            <!-- Spec Row -->
+            <div class="spec-row">
                 <div class="spec-cell">
                     <div class="spec-label">Runtime</div>
-                    <div class="spec-value">Multi-Agent Orchestration</div>
+                    <div class="spec-value">Multi-Agent</div>
                 </div>
                 <div class="spec-cell">
-                    <div class="spec-label">Max Concurrent</div>
-                    <div class="spec-value">32 Agents</div>
+                    <div class="spec-label">Max Agents</div>
+                    <div class="spec-value">32 Concurrent</div>
                 </div>
                 <div class="spec-cell">
                     <div class="spec-label">Data Source</div>
-                    <div class="spec-value">PostHog Integration</div>
-                </div>
-                <div class="spec-cell">
-                    <div class="spec-label">Throughput</div>
-                    <div class="spec-value">1.2K tokens/sec</div>
-                </div>
-                <div class="spec-cell">
-                    <div class="spec-label">Models</div>
-                    <div class="spec-value">GPT-4, Claude, Llama</div>
+                    <div class="spec-value">PostHog</div>
                 </div>
                 <div class="spec-cell">
                     <div class="spec-label">Cold Start</div>
-                    <div class="spec-value">&lt; 200ms</div>
+                    <div class="spec-value">&lt;200ms</div>
                 </div>
                 <div class="spec-cell">
-                    <div class="spec-label">Session Length</div>
-                    <div class="spec-value">Up to 24h continuous</div>
+                    <div class="spec-label">Session</div>
+                    <div class="spec-value">Up to 24h</div>
                 </div>
                 <div class="spec-cell">
                     <div class="spec-label">License</div>
-                    <div class="spec-value">MIT (Open Source)</div>
+                    <div class="spec-value">MIT Open Source</div>
                 </div>
             </div>
-        </section>
 
-        <section class="visual-section">
-            <div class="visual-grid">
-                <div class="metrics-col">
-                    <div class="metric-group">
-                        <div class="metric-label">Input</div>
-                        <div class="metric-item">PostHog Events</div>
-                        <div class="metric-item">Session Replays</div>
-                        <div class="metric-item">Error Stack Traces</div>
-                        <div class="metric-item highlight">234 errors/hour</div>
-                    </div>
-                    <div class="metric-group">
-                        <div class="metric-label">Analysis</div>
-                        <div class="metric-item">Rage Click Detection</div>
-                        <div class="metric-item">Confusion Patterns</div>
-                        <div class="metric-item">User Flow Analysis</div>
-                    </div>
-                    <div class="metric-group">
-                        <div class="metric-label">Queue</div>
-                        <div class="metric-item">Parallel Execution</div>
-                        <div class="metric-item">Priority Scheduling</div>
-                        <div class="metric-item highlight">12 active agents</div>
-                    </div>
+            <!-- Display Section -->
+            <div class="display-section">
+                <div class="display-col">
+                    <div class="display-col-label">Input</div>
+                    <div class="display-col-item">PostHog Events</div>
+                    <div class="display-col-item">Session Replays</div>
+                    <div class="display-col-item">Error Stack Traces</div>
+                    <div style="height: 20px;"></div>
+                    <div class="display-col-label">Analysis</div>
+                    <div class="display-col-item">Rage Click Detection</div>
+                    <div class="display-col-item">Confusion Patterns</div>
+                    <div class="display-col-item">User Flow Analysis</div>
                 </div>
-
-                <div class="central-display">
-                    <div class="display-frame">
-                        <span class="display-label top">0°</span>
-                        <span class="display-label right">90°</span>
-                        <span class="display-label bottom">180°</span>
-                        <span class="display-label left">270°</span>
-                        <div class="display-ring outer"></div>
-                        <div class="display-ring middle"></div>
-                        <div class="display-ring inner"></div>
-                        <div class="display-crosshair h"></div>
-                        <div class="display-crosshair v"></div>
-                        <div class="display-status">
-                            <div class="display-status-label">Agent Runtime</div>
-                            <div class="display-status-value">● Operational</div>
+                <div class="display-center">
+                    <div class="radar">
+                        <div class="radar-status">
+                            <div class="radar-status-label">Agent Runtime</div>
+                            <div class="radar-status-value">● Operational</div>
                         </div>
-                        <div class="display-dot" style="top: 25%; left: 65%;"></div>
-                        <div class="display-dot" style="top: 60%; left: 20%;"></div>
-                        <div class="display-dot" style="top: 70%; left: 75%;"></div>
                     </div>
                 </div>
-
-                <div class="metrics-col">
-                    <div class="metric-group">
-                        <div class="metric-label">Output</div>
-                        <div class="metric-item">Auto PR Creation</div>
-                        <div class="metric-item">Test Verification</div>
-                        <div class="metric-item">Lint Compliance</div>
-                    </div>
-                    <div class="metric-group">
-                        <div class="metric-label">Validation</div>
-                        <div class="metric-item highlight">87.6% merge rate</div>
-                        <div class="metric-item">14/14 tests passing</div>
-                        <div class="metric-item">Type safe</div>
-                    </div>
-                    <div class="metric-group">
-                        <div class="metric-label">Result</div>
-                        <div class="metric-item">PR #1424 opened</div>
-                        <div class="metric-item">Null check added</div>
-                        <div class="metric-item highlight">Deployed to prod</div>
-                    </div>
+                <div class="display-col">
+                    <div class="display-col-label">Output</div>
+                    <div class="display-col-item">Auto PR Creation</div>
+                    <div class="display-col-item">Test Verification</div>
+                    <div class="display-col-item">Lint Compliance</div>
+                    <div style="height: 20px;"></div>
+                    <div class="display-col-label">Pipeline</div>
+                    <div class="display-col-item">Error → Fix → PR → Deploy</div>
                 </div>
             </div>
-        </section>
 
-        <section class="code-section">
-            <div class="code-frame">
+            <!-- Code Section -->
+            <div class="code-section">
                 <div class="code-header">
                     <span class="code-badge">Twig Auto-Generated Fix</span>
                     <span class="code-path">src/checkout/CheckoutPage.tsx</span>
@@ -834,165 +692,105 @@
                     </div>
                     <div class="code-line">
                         <span class="line-number">2</span>
-                        <span><span class="code-comment">// This error affected 234 users in the last hour.</span></span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">3</span>
-                        <span><span class="code-comment">// Agent: A1-EXECUTOR · Confidence: 94.2%</span></span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">4</span>
-                        <span></span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">5</span>
                         <span><span class="code-keyword">const</span> <span class="code-function">getEmail</span> = (<span class="code-variable">user</span>: <span class="code-type">User</span> | <span class="code-keyword">null</span>): <span class="code-type">string</span> =&gt; {</span>
                     </div>
                     <div class="code-line">
-                        <span class="line-number">6</span>
-                        <span>  <span class="code-comment">// Before: const email = user.email;</span></span>
+                        <span class="line-number">3</span>
+                        <span>  <span class="code-keyword">return</span> <span class="code-variable">user</span>?.<span class="code-variable">email</span> ?? <span class="code-string">''</span>;</span>
                     </div>
                     <div class="code-line">
-                        <span class="line-number">7</span>
-                        <span>  <span class="code-keyword">const</span> <span class="code-variable">email</span> = <span class="code-variable">user</span>?.<span class="code-variable">email</span> ?? <span class="code-string">''</span>;</span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">8</span>
-                        <span>  <span class="code-keyword">if</span> (!<span class="code-variable">email</span>) {</span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">9</span>
-                        <span>    <span class="code-function">logWarning</span>(<span class="code-string">'checkout_email_missing'</span>, { <span class="code-variable">timestamp</span>: <span class="code-type">Date</span>.<span class="code-function">now</span>() });</span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">10</span>
-                        <span>  }</span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">11</span>
-                        <span>  <span class="code-keyword">return</span> <span class="code-variable">email</span>;</span>
-                    </div>
-                    <div class="code-line">
-                        <span class="line-number">12</span>
+                        <span class="line-number">4</span>
                         <span>};</span>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section class="stats-section">
-            <div class="stat-card">
-                <div class="stat-value">200</div>
-                <div class="stat-label">MS Cold Start</div>
-                <div class="stat-desc">Agents spin up instantly.</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">94%</div>
-                <div class="stat-label">Detection Rate</div>
-                <div class="stat-desc">Catches errors before users report.</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">87%</div>
-                <div class="stat-label">Merge Rate</div>
-                <div class="stat-desc">Generated PRs that ship.</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">24H</div>
-                <div class="stat-label">Max Session</div>
-                <div class="stat-desc">Monitor overnight, wake to fixes.</div>
-            </div>
-        </section>
-
-        <section class="use-cases-section">
-            <div class="section-header">
-                <span class="section-title">How to Use Twig</span>
-            </div>
-            <div class="use-case-tabs">
-                <button class="use-case-tab active">Fix Errors</button>
-                <button class="use-case-tab">Detect UX Issues</button>
-                <button class="use-case-tab">Generate PRs</button>
-                <button class="use-case-tab">Parallel Tasks</button>
-            </div>
-            <div class="use-case-content">
-                <div class="use-case-info">
-                    <h3>Automatic error detection and resolution</h3>
-                    <p>Twig detects errors in production, understands their impact through PostHog data, and generates fixes automatically. It sees the stack trace, correlates it with user sessions, and ships a PR with the fix.</p>
-                </div>
-                <div class="use-case-visual">
-                    <div class="error-line">TypeError: Cannot read property 'user' of undefined at CheckoutPage.tsx:47</div>
-                    <div class="action-line">→ Twig detected this error affecting 234 users</div>
-                    <div class="action-line">→ Generated fix: added null check</div>
-                    <div class="action-line">→ PR #1424 opened, tests passing</div>
-                </div>
-            </div>
-        </section>
-
-        <section class="capabilities-section">
-            <div class="section-header">
-                <span class="section-title">Capabilities</span>
-                <span class="section-subtitle">What Twig does for your codebase</span>
-            </div>
-            <div class="capabilities-grid">
-                <div class="capability-card">
-                    <div class="capability-index">01</div>
-                    <h3 class="capability-title">PostHog Integration</h3>
-                    <p class="capability-desc">Connects directly to your PostHog instance. Sees what your users see—session replays, error events, rage clicks—all feed the agent context.</p>
-                </div>
-                <div class="capability-card">
-                    <div class="capability-index">02</div>
-                    <h3 class="capability-title">Multi-Agent Orchestration</h3>
-                    <p class="capability-desc">Run up to 32 concurrent agents. Planners, executors, verifiers—each with specific roles. Parallel execution across your codebase.</p>
-                </div>
-                <div class="capability-card">
-                    <div class="capability-index">03</div>
-                    <h3 class="capability-title">Autonomous PR Creation</h3>
-                    <p class="capability-desc">Detects issues, reasons about fixes, writes code, runs tests, opens PRs. Full pipeline from error to deployed fix.</p>
-                </div>
-                <div class="capability-card">
-                    <div class="capability-index">04</div>
-                    <h3 class="capability-title">Fine-Grained Control</h3>
-                    <p class="capability-desc">Set throttles, autonomy levels, approval gates. Pause agents, kill tasks, adjust priorities. You decide how much control to give.</p>
-                </div>
-                <div class="capability-card">
-                    <div class="capability-index">05</div>
-                    <h3 class="capability-title">Model Agnostic</h3>
-                    <p class="capability-desc">Works with GPT-4, Claude, Llama, or your own fine-tuned models. Swap providers without changing workflows.</p>
-                </div>
-                <div class="capability-card">
-                    <div class="capability-index">06</div>
-                    <h3 class="capability-title">Real-Time Monitoring</h3>
-                    <p class="capability-desc">Watch agents think. See token usage, task progress, decision trees. Full visibility into what's running and why.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="cta-section">
-            <h2 class="cta-title">The future of software development is agentic.</h2>
-            <p class="cta-subtitle">
-                Twig connects to your PostHog instance and understands how real users interact with your product. When errors happen, when users rage-click, when flows confuse—Twig sees it, reasons about it, and ships the fix.
-            </p>
-            <div class="cta-buttons">
-                <a href="#" class="btn btn-primary">Download</a>
-                <a href="#" class="btn btn-secondary">View Docs</a>
-            </div>
-        </section>
-
-        <div class="color-bar">
-            <span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span>
         </div>
 
-        <footer>
-            <div class="footer-content">
-                <div class="footer-links">
-                    <span>Typeset in JetBrains Mono</span>
-                    <a href="#">GitHub</a>
-                    <a href="#">Discord</a>
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">System</div>
+                <div class="sidebar-row">
+                    <span class="sidebar-row-label">Runtime</span>
+                    <span class="sidebar-row-value">Multi-Agent</span>
                 </div>
-                <div>From the makers of PostHog</div>
-                <div>© 2026 Twig · PostHog Inc.</div>
+                <div class="sidebar-row">
+                    <span class="sidebar-row-label">Data Source</span>
+                    <span class="sidebar-row-value accent">PostHog</span>
+                </div>
+                <div class="sidebar-row">
+                    <span class="sidebar-row-label">Models</span>
+                    <span class="sidebar-row-value">GPT-4, Claude, Llama</span>
+                </div>
+                <div class="sidebar-row">
+                    <span class="sidebar-row-label">Platform</span>
+                    <span class="sidebar-row-value">macOS, Linux, Windows</span>
+                </div>
             </div>
-        </footer>
+
+            <div class="sidebar-section grow">
+                <div class="sidebar-label">Capabilities</div>
+                <div class="capability">
+                    <div class="capability-index">01</div>
+                    <div class="capability-title">PostHog Integration</div>
+                    <div class="capability-desc">Session replays, error events, rage clicks—all feed the agent.</div>
+                </div>
+                <div class="capability">
+                    <div class="capability-index">02</div>
+                    <div class="capability-title">Multi-Agent Orchestration</div>
+                    <div class="capability-desc">Up to 32 concurrent agents with specific roles.</div>
+                </div>
+                <div class="capability">
+                    <div class="capability-index">03</div>
+                    <div class="capability-title">Autonomous PR Creation</div>
+                    <div class="capability-desc">Detects issues, writes code, runs tests, opens PRs.</div>
+                </div>
+                <div class="capability">
+                    <div class="capability-index">04</div>
+                    <div class="capability-title">Model Agnostic</div>
+                    <div class="capability-desc">GPT-4, Claude, Llama, or your own models.</div>
+                </div>
+            </div>
+
+            <div class="cta-section">
+                <div class="cta-title">Start building with Twig</div>
+                <a href="#" class="btn btn-primary" style="width: 100%; text-align: center; display: block;">Download</a>
+            </div>
+        </div>
     </div>
+
+    <!-- Color Bar -->
+    <div class="color-bar">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-section">
+            <span>Typeset in JetBrains Mono</span>
+        </div>
+        <div class="footer-section grow">
+            <div class="footer-links">
+                <a href="#">GitHub</a>
+                <a href="#">Discord</a>
+                <a href="#">Twitter</a>
+            </div>
+            <span>© 2026 Twig · PostHog Inc.</span>
+        </div>
+        <div class="footer-section">
+            <span>MIT License</span>
+        </div>
+    </div>
+
+    <script>
+        function updateTimestamp() {
+            const now = new Date();
+            const formatted = now.toISOString().slice(11, 19) + ' UTC';
+            document.getElementById('timestamp').textContent = formatted;
+        }
+        updateTimestamp();
+        setInterval(updateTimestamp, 1000);
+    </script>
 </body>
 </html>
