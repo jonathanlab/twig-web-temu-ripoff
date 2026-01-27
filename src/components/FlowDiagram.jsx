@@ -38,7 +38,7 @@ function OutputNode({ data }) {
 function OutputLogNode({ data }) {
   return (
     <div className="output-log-node">
-      <Handle type="target" position={Position.Left} style={{ top: '50%' }} />
+      <Handle type="target" position={Position.Left} style={{ top: '202px' }} />
       <div className="output-log-header">
         <span className="controls">≡ ×</span>
         <span className="title">═══════ OUTPUT ═══════</span>
@@ -165,11 +165,10 @@ const batches = [
     inputDescs: { 'in-3': '23% drop at step 3', 'in-4': '"too many fields"' },
     agent: { id: 'A3' },
     steps: [
-      'analyzing funnel data...',
-      'matching survey feedback...',
-      'designing simplified flow...',
-      'implementing changes...',
-      'setting up A/B test...',
+      'correlating funnel + feedback...',
+      'simplifying checkout flow...',
+      'writing component tests...',
+      'configuring A/B test...',
     ],
     output: { label: 'Experiment', desc: 'checkout-v2 launched (50/50)' },
   },
@@ -179,9 +178,10 @@ const batches = [
     agent: { id: 'A4' },
     steps: [
       'identifying target elements...',
-      'adding event capture...',
+      'adding posthog.capture calls...',
+      'running tests...',
     ],
-    output: { label: 'Instrumentation', desc: 'auto-capture: 12 buttons' },
+    output: { label: 'Instrumentation', desc: 'PR #129: track CTA clicks' },
   },
   {
     activeInputs: ['in-1', 'in-3'], // Sessions + Analytics - long task
@@ -202,9 +202,9 @@ const batches = [
     inputDescs: { 'in-4': '"want dark mode"' },
     agent: { id: 'A6' },
     steps: [
-      'analyzing request frequency...',
-      'designing theme system...',
+      'scaffolding theme system...',
       'implementing dark mode...',
+      'running tests...',
     ],
     output: { label: 'Feature', desc: 'PR #132: dark mode support' },
   },
@@ -224,9 +224,8 @@ const batches = [
     agent: { id: 'A8' },
     steps: [
       'validating results...',
-      'updating pricing config...',
-      'creating changelog...',
-      'notifying stakeholders...',
+      'updating config...',
+      'deploying changes...',
     ],
     output: { label: 'Rollout', desc: 'pricing-v2 → production' },
   },
@@ -429,7 +428,13 @@ export default function FlowDiagram() {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        panOnDrag={false}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
+        preventScrolling={false}
         fitView
+        fitViewOptions={{ minZoom: 0.5, maxZoom: 2, padding: 0.08 }}
         proOptions={{ hideAttribution: true }}
       />
     </div>

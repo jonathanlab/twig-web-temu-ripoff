@@ -1,6 +1,6 @@
 /* Input nodes */
 .input-node {
-  background: var(--bg-card);
+  background: #F5ECDF;
   border: 1px solid var(--border);
   padding: 8px 12px;
   font-size: 10px;
@@ -8,6 +8,7 @@
   height: 44px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .input-node .node-content {
@@ -36,7 +37,7 @@
 
 /* Output nodes */
 .output-node {
-  background: var(--bg-card);
+  background: #F5ECDF;
   border: 1px solid var(--border);
   padding: 8px 12px;
   font-size: 10px;
@@ -73,7 +74,7 @@
 
 /* Output Log Node - matches TWIG node style */
 .output-log-node {
-  background: var(--bg-card);
+  background: #F5ECDF;
   border: 1px solid var(--border);
   width: 300px;
   height: 340px;
@@ -118,8 +119,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--border-light);
-  background: var(--bg);
+  border: 1px solid var(--border);
+  background: #F5ECDF;
   font-size: 10px;
 }
 
@@ -145,7 +146,7 @@
 
 /* TWIG central node */
 .twig-node {
-  background: var(--bg-card);
+  background: #F5ECDF;
   border: 1px solid var(--border);
   width: 300px;
   height: 340px;
@@ -195,8 +196,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--border-light);
-  background: var(--bg);
+  border: 1px solid var(--border);
+  background: #F5ECDF;
   font-size: 10px;
 }
 
@@ -251,7 +252,7 @@
 
 /* React Flow overrides */
 .react-flow__edge-path {
-  stroke: var(--border-light) !important;
+  stroke: var(--border) !important;
   stroke-width: 1 !important;
 }
 

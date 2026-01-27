@@ -114,7 +114,7 @@ function AsciiEdge({
           width={dotSize}
           height={dotSize}
           fill="#000000"
-          opacity={isActive ? 0.5 : 0.2}
+          opacity={1}
         />
       )
     }
