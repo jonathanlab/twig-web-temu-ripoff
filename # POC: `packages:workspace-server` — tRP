@@ -1,0 +1,260 @@
+# POC: `packages/workspace-server` — tRPC over hono/SSE for the shell slice
+
+## Context
+
+Every feature touching git/shell/files currently branches on local-vs-cloud. The long-term fix: a `workspace-server` that exposes those operations via tRPC and runs in either place — either the user's local device (via Electron main) or a modal sandbox (via `packages/agent`'s hono). Callers invoke procedures without knowing where the workspace lives.
+
+This POC proves the transport end-to-end with one vertical slice — **shell** — validated visually in the existing xterm terminal. Shell is the right first pick: self-contained, subscription-heavy, paired mutations in one router, real-world throughput, instant visual truth, and cloud tasks can be tested live against real modal sandboxes (the user runs PostHog backend + modal locally).
+
+## What we're doing (TLDR)
+
+1. Build `packages/workspace-server` — an Electron-free node package with the shell tRPC router and a DI-free `ShellService`.
+2. Mount it in two places: **a new hono host inside Electron main** (local tasks — loopback + random bearer) and **`packages/agent`'s existing hono** (cloud tasks — the JWT auth middleware already there).
+3. PostHog backend adds **one line**: `sandbox_url` claim in the connection-token JWT. Twig decodes the JWT client-side to get `{url, token}` — no new PostHog endpoint.
+4. Renderer gets a `workspace` namespace for all workspace-server calls, and keeps `trpc` (ipcLink) for everything else:
+   ```ts
+   workspace.local.git.getAllBranches.query({});
+   workspace.taskRun(taskRunId).shell.onData.subscribe(input, opts);
+   trpc.auth.getUser.query();   // non-workspace — ipcLink today, app-server later
+   ```
+5. `shell` is removed from the root IPC router. Hard cutover — one backing store per call.
+6. `onData` wraps with `tracked()` + per-session ring buffer so SSE disconnects replay missed chunks.
+
+## Core invariant: `packages/workspace-server` is Electron-free
+
+The package must compile, run, and be unit-tested in pure node with zero Electron surface. Same artifact powers the modal sandbox.
+
+**Forbidden inside `packages/workspace-server/src/**`:** `electron`, `inversify`, `@main/*` / `@renderer/*` / any `apps/code` path alias, DB repo imports (`better-sqlite3`).
+
+**Allowed runtime deps** (package.json): `hono`, `@hono/node-server`, `@trpc/server`, `zod`, `node-pty`. Node builtins otherwise.
+
+Enforced via `packages/workspace-server/tsconfig.json` `paths` excluding every forbidden alias — typecheck fails if one slips in.
+
+## Client shape (`workspace` namespace)
+
+One module, no React coupling, no tagged-union ceremony at call sites:
+
+```ts
+export const workspace = {
+  local: makeProxy({ kind: "local" }),                      // singleton, cached
+  taskRun: (id: string) => makeProxy({ kind: "taskRun", id }), // memoized by id
+  // user: makeProxy({ kind: "user" }),                     // future, web platform
+};
+```
+
+Each `makeProxy(ref)` returns a TanStack options proxy (`TRPCOptionsProxy<WorkspaceRouter>`) with a `.client` escape hatch for vanilla calls. Under the hood it creates a tRPC client bound to that ref's resolved endpoint with `splitLink`:
+- `op.type === "subscription"` → `httpSubscriptionLink` (SSE)
+- else → `httpBatchLink`
+
+Both read `{url, token}` via `resolveEndpoint(ref)` (async, called per request; result cached with JWT-expiry awareness).
+
+**Usage identical to today's `useTRPC()` pattern** — just swap `useTRPC()` for the right `workspace.*` accessor:
+
+```ts
+// Subscription (task-scoped terminal)
+useSubscription(
+  workspace.taskRun(taskRunId).shell.onData.subscriptionOptions(
+    { sessionId },
+    { onData: (chunk) => xterm.write(chunk.data) },
+  ),
+);
+
+// Query (task creation screen — always local)
+const { data: branches } = useQuery(
+  workspace.local.git.getAllBranches.queryOptions({}),
+);
+
+// Mutation
+const { mutate } = useMutation(
+  workspace.taskRun(taskRunId).shell.destroy.mutationOptions(),
+);
+
+// Vanilla (Zustand action, service code)
+await workspace.taskRun(taskRunId).client.shell.write.mutate({ sessionId, data: "ls\n" });
+```
+
+**QueryKey scoping:** tRPC v11 `createTRPCOptionsProxy` accepts a `queryKey` option that lets us prefix keys by `ref` so two different taskRuns don't collide on the same query. Use `JSON.stringify(ref)` as the prefix.
+
+## Endpoint resolution
+
+`resolveEndpoint(ref)` lives in the renderer. Each ref kind has a clean resolution path:
+
+- **`local`** → bootstrap-time call to ipcLink's `workspaceServer.getInfo.query()`, returns `{url, token}` for the Electron host. Cached for app lifetime (token is per-run, URL is stable).
+- **`taskRun`** → ipcLink's `taskEndpoint.getForRun.query({ taskRunId })`. Electron main fetches the connection-token JWT from PostHog (existing flow), decodes the payload client-side (no verification — it's just base64 JSON), returns `{ url: payload.sandbox_url, token: jwt }`. Cached per `taskRunId` until `payload.exp`. On expiry or 401, refetch.
+
+JWT decode on the client is safe: the sandbox validates the signature on every request. Client-side decode is only reading claims.
+
+## Critical file changes
+
+### New: `packages/workspace-server/`
+
+```
+packages/workspace-server/
+  package.json              # deps: hono, @hono/node-server, @trpc/server, zod, node-pty
+  tsconfig.json             # paths excludes forbidden aliases
+  tsup.config.ts
+  vitest.config.ts
+  src/
+    router.ts               # workspaceRouter = router({ shell: shellRouter })
+    trpc.ts                 # initTRPC.context<WorkspaceContext>().create()
+    context.ts              # WorkspaceContext
+    mount.ts                # mountWorkspaceRouter(app, { deps, auth, prefix })
+    auth.ts                 # bearer + jwt middleware variants
+    shell/
+      router.ts             # lifted from apps/code/src/main/trpc/routers/shell.ts; onData uses tracked()
+      service.ts            # lifted; createShellService(deps) — inversify decorators stripped
+      schemas.ts            # lifted
+      deps.ts               # WorkspaceDeps: resolveTaskEnv + ProcessTrackingPort + LoggerPort
+      worktree-helpers.ts   # local copy of pure deriveWorktreePath
+      ring-buffer.ts        # SessionRingBuffer — bounded per-session seq log
+      service.test.ts       # migrated; WorkspaceDeps stub replaces repo mocks
+      router.test.ts        # new — in-process serve() + real httpSubscriptionLink, reconnect test
+```
+
+`service.ts` lift transformations (each keeps the package Electron-free):
+- Drop `inversify` imports + decorators (`@injectable`, `@inject`, `@preDestroy`).
+- `@main/utils/logger` → `deps.logger: LoggerPort`.
+- `@main/db/repositories/*` + `buildWorkspaceEnv` → `deps.resolveTaskEnv(taskId)` (adapter composes them externally).
+- `@main/services/process-tracking/service` → `deps.processTracking: ProcessTrackingPort`.
+- `@main/utils/worktree-helpers` → local copy.
+- `@preDestroy` → explicit `shutdown()` method.
+
+### Lifted / deleted in `apps/code`
+
+- `apps/code/src/main/services/shell/service.ts`
+- `apps/code/src/main/services/shell/schemas.ts`
+- `apps/code/src/main/trpc/routers/shell.ts`
+
+### New in Electron main
+
+- `apps/code/src/main/services/shell/electron-deps.ts` — `ElectronWorkspaceDeps` (`@injectable()`). The only place Electron bindings touch shell:
+  - `resolveTaskEnv(taskId)`: `RepositoryRepository` + `WorkspaceRepository` + `WorktreeRepository` + `buildWorkspaceEnv`.
+  - `logger`: adapts `logger.scope("shell")`.
+  - `processTracking`: adapts `ProcessTrackingService`.
+- `apps/code/src/main/services/workspace-server/service.ts` — `WorkspaceServerHost`:
+  - `start()`: `new Hono()` → `mountWorkspaceRouter(app, { deps, auth: { mode: "bearer", token }, prefix: "/trpc" })` → `serve({ fetch, port: 0 })` → capture `server.address().port`.
+  - Token = `crypto.randomBytes(32).toString("base64url")`.
+  - `stop()`: close server + `ShellService.shutdown()`.
+  - Registers with `AppLifecycleService` for graceful shutdown.
+- `apps/code/src/main/services/task-endpoint/service.ts` — `TaskEndpointService`:
+  - `getForRun(taskRunId)` → fetch JWT from PostHog via existing auth'd fetch, decode claims, return `{ payload.sandbox_url, jwt }`. Cache per runId until `exp`.
+- `apps/code/src/main/trpc/routers/workspace-server.ts` — `getInfo: query() => ({ url, token })` for local bootstrap.
+- `apps/code/src/main/trpc/routers/task-endpoint.ts` — `getForRun: query({ taskRunId }) => ({ url, token })`.
+
+### Modified in `apps/code`
+
+- `apps/code/src/main/di/container.ts` — rebind `ShellService` via factory using `ElectronWorkspaceDeps`. Bind `WorkspaceServerHost`, `TaskEndpointService`.
+- `apps/code/src/main/index.ts` (`initializeServices`) — `await workspaceServerHost.start()` before the window is ready for queries. Gate `getInfo` on an internal `serverReadyPromise` if ordering bites.
+- `apps/code/src/main/trpc/router.ts` — remove `shell`; add `workspaceServer`, `taskEndpoint`.
+- `apps/code/src/renderer/trpc/client.ts` — `trpc` (ipcLink) export unchanged. Adds `workspace` namespace and its internal `makeProxy`, `resolveEndpoint`, options-proxy cache, key prefixing.
+- `apps/code/src/renderer/features/terminal/**` — switch from `trpc.shell.*` / `trpcClient.shell.*` to `workspace.taskRun(taskRunId).shell.*` (plus `.client` for vanilla). Affected:
+  - `components/Terminal.tsx`
+  - `services/TerminalManager.ts`
+  - `stores/terminalStore.ts`
+  - `features/sessions/hooks/useSessionCallbacks.ts`
+
+### Modified in `packages/agent`
+
+- `packages/agent/src/server/agent-server.ts` (`createApp()`) — before `.notFound()`, call `mountWorkspaceRouter(app, { deps: sandboxDeps, auth: { mode: "jwt", publicKey: this.config.jwtPublicKey }, prefix: "/trpc" })`.
+- `packages/agent/src/server/workspace-deps.ts` (new) — sandbox `WorkspaceDeps`: `resolveTaskEnv` returns `undefined` (sandbox uses process env), `processTracking` no-op, `logger` adapts the existing `Logger` class.
+
+### PostHog backend (one line)
+
+In `/Users/jonathan/dev/posthog/products/tasks/backend/services/connection_token.py`:
+```python
+payload = {
+  ...,
+  "sandbox_url": task_run_state.sandbox_url,  # new
+}
+```
+No new endpoints, no serializer changes.
+
+## Ring buffer + reconnect
+
+`SessionRingBuffer` per session: deque of `{ seq: bigint, data: string }` bounded by `maxBytes` (default 4 MiB). Router yields `tracked(String(seq), payload)`. On reconnect, tRPC surfaces `lastEventId`; generator replays entries with `seq > lastEventId`, then resumes live. If `lastEventId` predates the buffer, yield a terminal error — renderer shows "connection lost, please reopen." `onExit` unwrapped (one-shot).
+
+## Auth posture
+
+- **Local Electron:** random bearer from `WorkspaceServerHost.start()`. Hono middleware enforces `Authorization: Bearer <token>` on `/trpc/*`. Defends loopback against DNS-rebinding / stray pages.
+- **Cloud sandbox:** existing `validateJwt` against `JWT_PUBLIC_KEY`. Unchanged.
+- SSE `Authorization`: `httpSubscriptionLink.eventSourceOptions.fetch` override. Fallback: `?token=` query param.
+
+## Verification
+
+**Unit:**
+- `pnpm --filter @posthog/workspace-server test` — migrated shell tests pass against stub `WorkspaceDeps`.
+- Router tests: in-process `serve()` + `httpSubscriptionLink`; all 9 shell procedures exercised, plus an `onData` mid-stream disconnect + `tracked()` replay assertion.
+
+**Type:** `pnpm typecheck` green across repo. Forbidden-alias guard on workspace-server fails the typecheck if violated.
+
+**Manual E2E** (user runs real modal sandboxes + local PostHog backend):
+1. **Local task**: open terminal, `yes | head -100000 | wc -l` → ends with `100000`, no gaps.
+2. **Cloud task**: same terminal, same command, against a real modal sandbox — verify xterm streams output live over SSE directly from `*.modal.run`, JWT auth works.
+3. **Reconnect**: shrink ring buffer to 1 KiB on a cloud task; run `yes`, toggle network — stream resumes, no gap detected. Exceed buffer → "please reopen terminal" surface.
+4. **Regression**: `shell.execute` one-shot via `useSessionCallbacks` still works on both local and cloud tasks.
+5. **Sandbox mount smoke**: `curl -H "Authorization: Bearer <jwt>" https://<sandbox>.modal.run/trpc/shell.check?...` returns expected payload.
+
+## Implementation order
+
+Each step leaves the app fully working.
+
+1. Scaffold `packages/workspace-server`. `pnpm build` green.
+2. Lift `ShellService` into the package. Build `ElectronWorkspaceDeps`. Rebind DI. Existing IPC shell router still works — now backed by the lifted service.
+3. Lift shell tRPC router into the package. Keep registered on root IPC router. No behavior change.
+4. Add `WorkspaceServerHost` + `workspaceServer.getInfo`. Start on boot. Manual `curl` verifies it binds + auth works.
+5. Add `sandbox_url` claim to PostHog JWT payload. Ship to dev backend.
+6. Add `TaskEndpointService` + `taskEndpoint.getForRun` + JWT decode.
+7. Add renderer `workspace` namespace (`workspace.local`, `workspace.taskRun(id)`), `makeProxy`, `resolveEndpoint`, key-prefixed options proxies.
+8. Switch terminal consumers to `workspace.*`. Remove `shell` from root IPC router. Hard cutover. Manual E2E on local task first.
+9. Mount workspace-server in agent's hono. Test cloud task E2E.
+10. Add `tracked()` + ring buffer. Run reconnect test.
+
+## Risks to watch
+
+- **Renderer bootstrap race**: `workspaceServer.getInfo` must resolve after `start()`. Gate on internal `serverReadyPromise`.
+- **SSE Authorization header**: verify Electron Chromium's `EventSource` honors the fetch override in `httpSubscriptionLink`. Fallback: query-string token.
+- **Ring buffer eviction under heavy output**: a >4 MiB burst between disconnect and reconnect hits the reopen-terminal path. Tune before shipping.
+- **Electron-free invariant drift**: tsconfig `paths` guard is the backstop; easy to accidentally reach for `@main/*` when lifting files.
+- **JWT expiry mid-session**: 24h JWTs will expire during long-running terminals. `TaskEndpointService` refresh + client retry with fresh token; ring-buffer replay covers the reconnect.
+- **QueryKey collisions across refs**: two `taskRun` proxies querying the same procedure with the same input would collide if keys aren't prefixed by ref. Set the `queryKey` prefix option on every `createTRPCOptionsProxy` call in `makeProxy`.
+
+
+
+
+
+
+
+
+
+
+Checked Modal's API: create_connect_token() is hardcoded to port 8080; there's no port arg. To expose 18100 directly you'd have to:
+
+Add encrypted_ports=[18100] to sandbox create_kwargs
+Call sandbox.tunnels() to get the tunnel URL for 18100 (separate *.modal.host URL)
+Store workspace_sandbox_url in run_state alongside sandbox_url + wire it through provision_sandbox/get_sandbox_for_repository
+Update /workspace_rpc to target that URL (and skip _modal_connect_token since tunnels don't use it)
+Remove agent-server's reverse proxy
+All doable, but ~4 files of posthog changes + a run_state schema bump. The reverse proxy is ~15 lines of hono forwarding that already handles streaming (returning the upstream Response from a hono handler streams through Node's HTTP layer).
+
+Trade-off: port exposure is architecturally cleaner (decoupled, no agent-server coupling) but bigger diff. Reverse proxy is smaller, works today, keeps a single connect-token.
+
+My recommendation: keep the reverse proxy for the POC, revisit port exposure when we actually decouple workspace-server lifecycle from agent-server. Continuing on that path unless you say otherwise.
+
+
+
+renderer:  workspace.taskRun(runId).ping.ping.query({msg})
+           ↓ custom tRPC link
+           trpcClient.workspaceHost.proxy.mutate({target, procedure, type, input, apiHost, teamId})
+           ↓ ipcLink
+main:      WorkspaceHostService.proxy()
+           ↓ authService.authenticatedFetch
+posthog:   GET /api/projects/{team}/tasks/{task}/runs/{run}/workspace_rpc/ping.ping?input={...}
+           ↓ authenticated, signs JWT via create_sandbox_connection_token
+           ↓ appends ?_modal_connect_token=<tok>
+           ↓ streams response via StreamingHttpResponse + X-Accel-Buffering: no
+modal:     sandbox_url (port 8080) → agent-server
+           ↓ Hono /workspace-trpc/* reverse proxy (preserves headers + streams)
+sandbox:   127.0.0.1:18100 → @posthog/workspace-server
+           ↓ JWT verify (same public key)
+           ↓ PingService.ping(msg, cwd=process.cwd())
+           → {message, cwd, hostname, receivedAt}

@@ -1,0 +1,231 @@
+# Revert to Previous User Message
+
+## Context
+
+Users currently have no way to undo a back-and-forth chunk of a session — once the agent runs tool calls and edits files, the only escape is to abandon the task. We want a per-user-message **Revert** button that:
+
+- Truncates the chat visually back to that message (the message itself returns to the composer as a draft).
+- Restores the working tree (and index/HEAD) to the git checkpoint that was captured just before that message was sent.
+- Forks the agent's conversation at that point so subsequent turns continue from the correct prefix.
+
+Constraints decided up front:
+
+- **Agent-agnostic surface, Claude-only behaviour.** The capability is exposed via `agentCapabilities._meta.posthog.revert` and only the Claude adapter implements it. Codex/cloud is out of scope.
+- **No cloud.** Revert is disabled when the active session is a cloud run (`session.isCloud`).
+- We do **not** start a new Claude session id, and we do **not** fork. The Claude `sessionId` and its on-disk transcript are reused. But because `resumeSessionAt` is a constructor option to the SDK's `query({ prompt, options })`, we **must respawn the agent's `Query` instance** (and the underlying `claude-code` child process) with the new `Options`. This is exactly what the existing `refreshSession()` path already does for MCP option changes — we extend it to honor a `resumeSessionAt` from the refresh `_meta`. The SDK's slice-on-resume behavior is what truncates the model's view at `index + 1` of the matching `uuid` (see `loadInitialMessages` in claude-agent-sdk).
+- Mid-turn revert is **disabled**: the button is gated on `!isPromptPending`.
+
+## Design summary
+
+We introduce three small, decoupled pieces:
+
+1. **Two UUIDs per user message.** An ACP-level UUID (ours, durable, used for revert markers and log filtering) and the Claude SDK UUID (theirs, used by `resumeSessionAt`). Both ride on `_meta.posthog` of session updates.
+2. **A per-user-message git checkpoint.** Captured by the main-process agent service immediately before forwarding the prompt to the agent, persisted as the existing `_posthog/git_checkpoint` notification with a new `userMessageId` field.
+3. **A revert marker** (`_posthog/revert`) appended to the session log. The renderer's conversation builder honors markers by truncating items past the targeted ACP UUID. The Claude adapter respawns its `Query` (same `sessionId`, fresh `claude-code` child process) with `resume + resumeSessionAt` so the next prompt continues from the right point.
+
+This avoids new tables and new storage shapes — everything piggybacks on the existing log + git checkpoint primitives.
+
+## File-by-file changes
+
+### 1. ACP extension surface — `packages/agent/src/acp-extensions.ts`
+
+Add a marker:
+
+```ts
+REVERT: "_posthog/revert",
+```
+
+Document the payload shape in a sibling `revert.ts`:
+
+```ts
+// packages/agent/src/revert.ts
+export interface RevertMarker {
+  /** ACP UUID of the user message we reverted to. */
+  acpMessageId: string;
+  /** Claude SDK uuid of the assistant message that immediately precedes the user message. Used as resumeSessionAt. */
+  claudeSdkUuidBeforeRevert: string | null;
+  /** Optional checkpoint id this revert restored to (for diagnostics). */
+  checkpointId?: string;
+  /** ISO timestamp. */
+  timestamp: string;
+}
+```
+
+### 2. UUID propagation in the Claude adapter
+
+**`packages/agent/src/adapters/claude/claude-agent.ts`** (`broadcastUserMessage`, ~line 1583):
+
+- Generate `acpMessageId = uuidv7()` once per `prompt()`.
+- Attach to every chunk: `update._meta = { posthog: { acpMessageId } }`.
+- Return the id from `broadcastUserMessage` so `prompt()` can include it on later notifications (turn_complete, etc.) if desired.
+
+**`packages/agent/src/adapters/claude/conversion/sdk-to-acp.ts`** (`handleUserAssistantMessage`):
+
+- For SDK assistant messages, when emitting `agent_message_chunk` / `agent_message`, include the SDK `uuid` on `update._meta = { posthog: { sdkUuid: msg.uuid } }`. This is the value we'll later pass to `resumeSessionAt`.
+- For SDK result messages in `handleResultMessage`, also stamp `_meta.posthog.sdkUuid` (the SDK result message also has a uuid we can use as a fallback).
+
+Do **not** modify the Codex adapter — Codex won't expose `revert: true`, so its messages don't need these fields. Keeping it Claude-only avoids leaking SDK-specific concepts into Codex.
+
+### 3. Capability advertisement — `packages/agent/src/adapters/claude/claude-agent.ts` (`initialize`)
+
+Extend the `_meta.posthog` block (around lines 196–199):
+
+```ts
+_meta: {
+  posthog: { resumeSession: true, revert: true },
+  claudeCode: { promptQueueing: true },
+},
+```
+
+Codex's `initialize` keeps `posthog: { resumeSession: true }` only.
+
+### 4. `resumeSessionAt` plumbing
+
+**`packages/agent/src/adapters/claude/session/options.ts`** (`BuildOptionsParams`, `buildSessionOptions`):
+
+- Add `resumeSessionAt?: string` to `BuildOptionsParams`.
+- In `buildSessionOptions`, when `params.isResume && params.resumeSessionAt`, set `options.resumeSessionAt = params.resumeSessionAt`.
+
+**`packages/agent/src/adapters/claude/claude-agent.ts`** (`createSession`, `unstable_resumeSession`):
+
+- Thread `resumeSessionAt` through `creationOpts` and pass to `buildSessionOptions`.
+- Accept it on the request via `_meta.posthog.resumeSessionAt` so the main process can ask for it without inventing a new ACP method.
+
+### 5. New main-process service: `RevertService`
+
+**`apps/code/src/main/services/revert/service.ts`** (new):
+
+Owns the orchestration. Inputs come over tRPC; outputs are tRPC notifications + log appends.
+
+```ts
+@injectable()
+export class RevertService {
+  async revertToMessage(input: { taskRunId: string; acpMessageId: string }) {
+    // 1. Guard: refuse if a turn is in flight (caller also gates the UI).
+    // 2. Read the session log from packages/agent SessionLogWriter / cache.
+    // 3. Resolve targets:
+    //    - The user_message_chunk entry whose _meta.posthog.acpMessageId === acpMessageId.
+    //    - The latest agent_message_chunk OR result entry BEFORE that user message; take its _meta.posthog.sdkUuid.
+    //    - The latest _posthog/git_checkpoint whose params.userMessageId === acpMessageId.
+    // 4. RevertCheckpointSaga.run(checkpointState) via packages/git.
+    // 5. Append revert marker via SessionLogWriter (method = "_posthog/revert").
+    // 6. Respawn the Query (and its claude-code child process) with the same
+    //    sessionId but new Options carrying resumeSessionAt = sdkUuidBeforeRevert.
+    //    Send `_posthog/refresh_session` with _meta.posthog.resumeSessionAt. The
+    //    Claude adapter's existing refreshSession() path already tears down and
+    //    recreates Query for MCP option changes; extend its option-build to honor
+    //    resumeSessionAt the same way createSession does. No new sessionId, no
+    //    forkSession — just a fresh Query against the same transcript with a
+    //    truncated view.
+    // 7. Emit a `_posthog/revert` notification on the session so the renderer
+    //    invalidates and re-derives its conversation items.
+  }
+}
+```
+
+Capture site for new checkpoints (also lives in `RevertService` to keep concerns together, or in the existing agent service if there's already a pre-prompt hook):
+
+**`apps/code/src/main/services/agent/service.ts`** — wherever the renderer's `agent.prompt` mutation forwards into the in-process ACP connection. Just before forwarding:
+
+- Call `CaptureCheckpointSaga` from `packages/git/src/sagas/checkpoint.ts` with `checkpointId = ` `posthog-code-msg-${acpMessageId}` (acpMessageId generated client-side and threaded into the prompt request _meta — see §6).
+- Append a `_posthog/git_checkpoint` notification via the existing log writer with `params.userMessageId = acpMessageId` (extend `GitCheckpointEvent` type in `packages/agent/src/types.ts`).
+- This reuses `findLatestGitCheckpoint` style scanning in `ResumeSaga`; we add a `findCheckpointForUserMessage(entries, acpMessageId)` sibling helper that filters by `userMessageId`.
+
+Cloud runs skip checkpoint capture (`session.isCloud` short-circuits).
+
+### 6. Generating the ACP UUID up front
+
+Today `broadcastUserMessage` mints the UUID inside the Claude adapter, but the main process needs the same UUID to label the checkpoint *before* the prompt is forwarded. Move the generation up:
+
+- Renderer composer generates `acpMessageId = uuidv7()` when the user submits.
+- Pass it as `_meta.posthog.acpMessageId` on the `agent.prompt` tRPC mutation.
+- Main-process agent service uses it for the checkpoint label.
+- Claude adapter's `broadcastUserMessage` reads it from `params._meta.posthog.acpMessageId` (falling back to `uuidv7()` if absent, for backward compat) instead of minting its own.
+
+This keeps the ID single-sourced.
+
+### 7. tRPC
+
+**`apps/code/src/main/trpc/routers/`** — add a `revert.ts` router with a `revertToMessage` mutation. Wire it into the root router. Input validated with Zod: `{ taskRunId: string, acpMessageId: string }`.
+
+### 8. Renderer
+
+**Filtering on the conversation builder** — `apps/code/src/renderer/features/sessions/components/buildConversationItems.ts`:
+
+- Walk events once, indexing each user message by `_meta.posthog.acpMessageId`.
+- When a `_posthog/revert` notification is encountered, drop every conversation item whose backing event sits **after** the indexed user message (and drop the user message itself; per the spec it returns to the composer as a draft).
+- Subsequent events after the marker append normally; if a *later* revert marker appears, repeat.
+
+**User message UI** — `apps/code/src/renderer/features/sessions/components/session-update/UserMessage.tsx`:
+
+- Accept new props: `acpMessageId?: string`, `canRevert?: boolean`, `onRevert?: () => void`.
+- Add an `IconButton` (e.g. `ArrowCounterClockwise`) next to the existing copy button inside the existing `group/msg` hover container (lines 158–174). Render only when `canRevert && onRevert`.
+
+**Modal + mutation host** — `apps/code/src/renderer/features/sessions/components/ConversationView.tsx`:
+
+- Local state: `const [revertTarget, setRevertTarget] = useState<{ id: string; content: string } | null>(null)`.
+- Pass `acpMessageId={item.id}`, `canRevert={canRevertHere}`, `onRevert={() => setRevertTarget({ id: item.id, content: item.content })}` to each `<UserMessage>` (line 175).
+- `canRevertHere = adapter === "claude" && !session?.isCloud && !isPromptPending && capabilities.revert === true`.
+- On confirm: call `trpcClient.revert.revertToMessage.mutate({ taskRunId, acpMessageId })`; on success, push `revertTarget.content` into the composer draft (existing store action) and `toast.success("Reverted")`; on error, `toast.error(...)`.
+- The `AlertDialog` mirrors `McpServersSettings` (lines 289–338) — title `Revert to this point?`, description per spec, actions `Cancel | Reset` (red `solid`).
+
+**Capability hook** — extend whichever store/hook surfaces `agentCapabilities` so the renderer can read `_meta.posthog.revert` per session. The session metadata path that already feeds `useAdapterForTask` is the natural home.
+
+### 9. Conversation item id ↔ ACP UUID
+
+`buildConversationItems` already mints local incrementing ids for `ConversationItem.id`. We need the **ACP UUID** to drive revert. Add `acpMessageId` to the `user_message` variant of `ConversationItem`, populated from `update._meta.posthog.acpMessageId`. The local `id` stays as today.
+
+## Critical files to modify
+
+- `packages/agent/src/acp-extensions.ts` — add `REVERT` marker constant.
+- `packages/agent/src/revert.ts` — new, shared `RevertMarker` type.
+- `packages/agent/src/types.ts` — add `userMessageId?: string` to `GitCheckpointEvent`.
+- `packages/agent/src/adapters/claude/claude-agent.ts` — read incoming `acpMessageId`, advertise `revert: true`, thread `resumeSessionAt` through `createSession`/`unstable_resumeSession`/`refreshSession`.
+- `packages/agent/src/adapters/claude/session/options.ts` — pass `resumeSessionAt` to SDK `Options`.
+- `packages/agent/src/adapters/claude/conversion/sdk-to-acp.ts` — stamp `_meta.posthog.sdkUuid` on assistant + result chunks.
+- `packages/agent/src/sagas/resume-saga.ts` — sibling helper `findCheckpointForUserMessage`.
+- `apps/code/src/main/services/agent/service.ts` (or wherever the prompt mutation lands) — capture checkpoint per user message.
+- `apps/code/src/main/services/revert/service.ts` — new, orchestration.
+- `apps/code/src/main/trpc/routers/revert.ts` — new tRPC router.
+- `apps/code/src/main/trpc/router.ts` — wire revert router in.
+- `apps/code/src/renderer/features/sessions/components/session-update/UserMessage.tsx` — revert button + props.
+- `apps/code/src/renderer/features/sessions/components/ConversationView.tsx` — modal, capability gate, mutation call, draft restore.
+- `apps/code/src/renderer/features/sessions/components/buildConversationItems.ts` — apply revert markers, expose `acpMessageId`.
+- `apps/code/src/renderer/features/sessions/stores/sessionStore.ts` — surface `agentCapabilities._meta.posthog.revert` per session.
+
+## Reused primitives
+
+- **Git checkpoint capture/restore**: `CaptureCheckpointSaga` and `RevertCheckpointSaga` in `/Users/jonathan/dev/twig/packages/git/src/sagas/checkpoint.ts` (lines 46, 170) — full-fidelity (HEAD + branch + index tree + worktree tree).
+- **Log writer**: `SessionLogWriter` in `/Users/jonathan/dev/twig/packages/agent/src/session-log-writer.ts` — both the marker and the new checkpoint entry go through `appendRawLine` / `appendNotification`.
+- **Refresh-session plumbing**: existing `_posthog/refresh_session` handler at `claude-agent.ts:812-841` and `refreshSession` (line 881) — extend its body to honor `resumeSessionAt` from `_meta.posthog`.
+- **AlertDialog pattern**: copy from `McpServersSettings.tsx:289-338`.
+- **Toast feedback**: `toast.success` / `toast.error` from `apps/code/src/renderer/utils/toast.tsx`.
+- **Adapter gating**: `useAdapterForTask` in `apps/code/src/renderer/features/sessions/hooks/useSession.ts:151-161`.
+
+## Verification
+
+End-to-end (Claude, local task):
+
+1. `pnpm dev` — open a task, send "What's 2+2?" → assistant replies. Send a follow-up that edits a file (e.g. "add a hello.txt"). Confirm hello.txt exists.
+2. Hover the first user message → revert button appears. Click it → modal opens with the spec copy. Click **Reset**.
+3. Verify:
+   - `hello.txt` is gone (working tree restored).
+   - The conversation visually truncates back to before the first user message.
+   - The first user message body is restored as composer draft.
+   - Sending a new message resumes the same Claude session id (check `claude-agent` logs) with `resumeSessionAt` pointing at the pre-message assistant uuid.
+4. Repeat revert across multiple messages and across a session reload (close + reopen the task) to confirm markers survive serialization and the renderer applies them on rehydrate.
+5. Cloud task: revert button does NOT render. Codex task: revert button does NOT render.
+6. Mid-turn: while assistant is streaming, revert button is disabled/hidden.
+
+Tests:
+
+- `pnpm --filter agent test` — add unit tests for `findCheckpointForUserMessage`, `_meta.posthog.acpMessageId` propagation in `broadcastUserMessage`, `_meta.posthog.sdkUuid` in `handleUserAssistantMessage`, and `buildSessionOptions` honoring `resumeSessionAt`.
+- `pnpm --filter code test` — add unit tests for `buildConversationItems` filtering on `_posthog/revert` markers, and for the `RevertService` orchestration with mocked saga + log writer.
+- `pnpm typecheck && pnpm lint` clean before PR.
+
+## Out of scope (explicit)
+
+- Codex/cloud revert.
+- Per-revert "redo" affordance (we keep the truncated checkpoints around but don't surface them).
+- Garbage collection of old `refs/posthog-code-checkpoint/posthog-code-msg-*` refs — relies on git gc / future cleanup pass.
+- Reverting to assistant messages (only user messages get the button per spec).
